@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clock App Style Samples</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; background: #f0f0f0; padding: 30px; display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+  h1 { width: 100%; text-align: center; color: #555; font-size: 22px; margin-bottom: 10px; }
+  .sample { width: 320px; border-radius: 24px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+  .sample-title { text-align: center; font-size: 15px; font-weight: 700; color: #666; margin-top: 12px; margin-bottom: 4px; }
+
+  /* --- Style A: Sakura Dream --- */
+  .style-a { background: #FFF0F3; }
+  .style-a .clock-area { padding: 24px 20px 12px; text-align: center; }
+  .style-a .time { font-size: 48px; font-weight: 800; color: #D4627A; letter-spacing: 2px; }
+  .style-a .date { font-size: 13px; color: #C48B9F; margin-top: 4px; }
+  .style-a .settings { background: #FFF7F9; margin: 10px 16px; border-radius: 16px; padding: 14px 16px; }
+  .style-a .row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #9B5066; }
+  .style-a .row .val { background: #FFE0E8; color: #D4627A; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 15px; }
+  .style-a .btns { display: flex; gap: 8px; padding: 12px 16px 18px; justify-content: center; }
+  .style-a .btn { flex: 1; padding: 10px 0; border: none; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .style-a .btn-start { background: #98D8AA; color: #2D6A4F; }
+  .style-a .btn-stop { background: #FFB7C5; color: #8B3A4A; }
+  .style-a .btn-test { background: #FFDAB9; color: #8B6914; }
+  .style-a .btn-voice { background: #E8D5F5; color: #6B3FA0; }
+  .style-a .status { text-align: center; font-size: 11px; color: #C48B9F; padding: 8px; background: #FFE8EE; border-radius: 0 0 24px 24px; }
+
+  /* --- Style B: Mint Garden --- */
+  .style-b { background: #F0FFF4; }
+  .style-b .clock-area { padding: 24px 20px 12px; text-align: center; }
+  .style-b .time { font-size: 48px; font-weight: 800; color: #4CAF7D; letter-spacing: 2px; }
+  .style-b .date { font-size: 13px; color: #88BFA0; margin-top: 4px; }
+  .style-b .settings { background: #F7FFF9; margin: 10px 16px; border-radius: 16px; padding: 14px 16px; border: 1.5px solid #D4EDDA; }
+  .style-b .row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #3E8B5E; }
+  .style-b .row .val { background: #D4EDDA; color: #3E8B5E; padding: 4px 14px; border-radius: 12px; font-weight: 700; font-size: 15px; }
+  .style-b .btns { display: flex; gap: 8px; padding: 12px 16px 18px; justify-content: center; }
+  .style-b .btn { flex: 1; padding: 10px 0; border: none; border-radius: 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .style-b .btn-start { background: #A8E6CF; color: #2D6A4F; }
+  .style-b .btn-stop { background: #F4C2C2; color: #8B3A3A; }
+  .style-b .btn-test { background: #FFE5B4; color: #8B6914; }
+  .style-b .btn-voice { background: #D5E8F0; color: #3A6F8B; }
+  .style-b .status { text-align: center; font-size: 11px; color: #88BFA0; padding: 8px; background: #E8F5E9; border-radius: 0 0 24px 24px; }
+
+  /* --- Style C: Cotton Candy --- */
+  .style-c { background: linear-gradient(135deg, #FFDEE9 0%, #D4FCE4 100%); }
+  .style-c .clock-area { padding: 24px 20px 12px; text-align: center; }
+  .style-c .time { font-size: 48px; font-weight: 800; color: #fff; text-shadow: 0 2px 12px rgba(200,100,130,0.3); letter-spacing: 2px; }
+  .style-c .date { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 4px; text-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .style-c .settings { background: rgba(255,255,255,0.75); backdrop-filter: blur(10px); margin: 10px 16px; border-radius: 20px; padding: 14px 16px; }
+  .style-c .row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #B06080; }
+  .style-c .row .val { background: linear-gradient(135deg, #FFD1DC, #C1F0D1); color: #7B4F60; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 15px; }
+  .style-c .btns { display: flex; gap: 8px; padding: 12px 16px 18px; justify-content: center; }
+  .style-c .btn { flex: 1; padding: 10px 0; border: none; border-radius: 22px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
+  .style-c .btn-start { background: linear-gradient(135deg, #A8E6CF, #88D8A8); color: #2D6A4F; }
+  .style-c .btn-stop { background: linear-gradient(135deg, #FFB7C5, #FF9AAF); color: #fff; }
+  .style-c .btn-test { background: linear-gradient(135deg, #FFDAB9, #FFD1A9); color: #8B6914; }
+  .style-c .btn-voice { background: linear-gradient(135deg, #D5B8FF, #C4A0FF); color: #fff; }
+  .style-c .status { text-align: center; font-size: 11px; color: rgba(255,255,255,0.7); padding: 8px; background: rgba(255,255,255,0.2); border-radius: 0 0 24px 24px; }
+</style>
+</head>
+<body>
+<h1>Choose Your Clock Style</h1>
+
+<div>
+  <div class="sample-title">Style A: Sakura Dream</div>
+  <div class="sample style-a">
+    <div class="clock-area">
+      <div class="time">15:30:45</div>
+      <div class="date">2026-04-05  Sunday</div>
+    </div>
+    <div class="settings">
+      <div class="row"><span>Alarm Time</span><span class="val">08:00</span></div>
+      <div class="row"><span>Repeat Every</span><span class="val">5 min</span></div>
+      <div class="row"><span>Voice Speed</span><span class="val">200</span></div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-start">Start</button>
+      <button class="btn btn-stop">Stop</button>
+      <button class="btn btn-test">Test</button>
+      <button class="btn btn-voice">Voice</button>
+    </div>
+    <div class="status">Ready - Set alarm time and press Start</div>
+  </div>
+</div>
+
+<div>
+  <div class="sample-title">Style B: Mint Garden</div>
+  <div class="sample style-b">
+    <div class="clock-area">
+      <div class="time">15:30:45</div>
+      <div class="date">2026-04-05  Sunday</div>
+    </div>
+    <div class="settings">
+      <div class="row"><span>Alarm Time</span><span class="val">08:00</span></div>
+      <div class="row"><span>Repeat Every</span><span class="val">5 min</span></div>
+      <div class="row"><span>Voice Speed</span><span class="val">200</span></div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-start">Start</button>
+      <button class="btn btn-stop">Stop</button>
+      <button class="btn btn-test">Test</button>
+      <button class="btn btn-voice">Voice</button>
+    </div>
+    <div class="status">Ready - Set alarm time and press Start</div>
+  </div>
+</div>
+
+<div>
+  <div class="sample-title">Style C: Cotton Candy</div>
+  <div class="sample style-c">
+    <div class="clock-area">
+      <div class="time">15:30:45</div>
+      <div class="date">2026-04-05  Sunday</div>
+    </div>
+    <div class="settings">
+      <div class="row"><span>Alarm Time</span><span class="val">08:00</span></div>
+      <div class="row"><span>Repeat Every</span><span class="val">5 min</span></div>
+      <div class="row"><span>Voice Speed</span><span class="val">200</span></div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-start">Start</button>
+      <button class="btn btn-stop">Stop</button>
+      <button class="btn btn-test">Test</button>
+      <button class="btn btn-voice">Voice</button>
+    </div>
+    <div class="status">Ready - Set alarm time and press Start</div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Voice cache (generated audio, not needed in repo)
+voice_cache/
+
+# Voice library (personal recordings)
+voice_library/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# App bundle (built locally)
+*.app/
+
+# Generated icons (can regenerate)
+AppIcon.iconset/
+
+# Config (user-specific settings)
+config.json
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+.claude/

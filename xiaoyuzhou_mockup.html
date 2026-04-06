@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clock App - 小宇宙 Style Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+    background: #F5F5F5;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .phone {
+    width: 390px;
+    background: #FFFFFF;
+    border-radius: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+    overflow: hidden;
+    padding-bottom: 24px;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 20px 24px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A1A1A;
+    letter-spacing: -0.3px;
+  }
+  .header .subtitle {
+    font-size: 12px;
+    color: #999;
+    font-weight: 400;
+  }
+
+  /* ── Clock Area (inspired by 小宇宙's player circle) ── */
+  .clock-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0 16px;
+  }
+  .clock-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25);
+    position: relative;
+  }
+  .clock-circle::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+  }
+  .clock-time {
+    font-size: 38px;
+    font-weight: 700;
+    color: #FFFFFF;
+    letter-spacing: 1px;
+  }
+  .clock-date {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 2px;
+  }
+
+  /* ── Settings Card ── */
+  .card {
+    margin: 8px 16px;
+    background: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid #F0F0F0;
+    padding: 4px 0;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #999;
+    padding: 12px 18px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid #F8F8F8;
+  }
+  .row:last-child { border-bottom: none; }
+  .row-label {
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+  }
+  .row-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pill {
+    background: #F0F0F5;
+    color: #667EEA;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 5px 16px;
+    border-radius: 20px;
+  }
+  .pill-unit {
+    font-size: 13px;
+    color: #999;
+  }
+
+  /* Slider */
+  .slider-track {
+    width: 140px;
+    height: 4px;
+    background: #EEEEF2;
+    border-radius: 2px;
+    position: relative;
+  }
+  .slider-fill {
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, #667EEA, #764BA2);
+    border-radius: 2px;
+  }
+  .slider-thumb {
+    width: 16px;
+    height: 16px;
+    background: #FFFFFF;
+    border: 2px solid #667EEA;
+    border-radius: 50%;
+    position: absolute;
+    top: -6px;
+    left: 57%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+
+  /* ── Voice Card ── */
+  .voice-card {
+    margin: 8px 16px;
+    background: #FAFAFF;
+    border-radius: 16px;
+    border: 1px solid #EDEDF5;
+    padding: 14px 18px;
+  }
+  .voice-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .voice-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .voice-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667EEA, #764BA2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+  }
+  .voice-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+  }
+  .voice-sub {
+    font-size: 11px;
+    color: #999;
+  }
+  .voice-btns {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-sm {
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-record {
+    background: #667EEA;
+    color: white;
+  }
+  .btn-upload {
+    background: #F0F0F5;
+    color: #666;
+  }
+
+  /* ── Library ── */
+  .lib-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #999;
+    padding: 14px 18px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .lib-list {
+    padding: 0 16px 6px;
+  }
+  .lib-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-bottom: 4px;
+  }
+  .lib-item.active {
+    background: #F0F0FF;
+  }
+  .lib-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 10px;
+  }
+  .lib-dot.active { background: #667EEA; }
+  .lib-dot.inactive { background: #DDD; }
+  .lib-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+  }
+  .lib-tag {
+    font-size: 10px;
+    color: #667EEA;
+    background: #EEEEFF;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .lib-btn {
+    font-size: 11px;
+    color: #999;
+    background: none;
+    border: 1px solid #E5E5E5;
+    padding: 3px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-left: 6px;
+  }
+
+  /* ── Action Buttons ── */
+  .actions {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px 4px;
+  }
+  .btn-action {
+    flex: 1;
+    padding: 13px 0;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .btn-start {
+    background: linear-gradient(135deg, #667EEA, #764BA2);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  }
+  .btn-stop {
+    background: #F5F5F5;
+    color: #666;
+  }
+  .btn-test {
+    background: #FFF8F0;
+    color: #E8A040;
+    border: 1px solid #F0E0C8;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    margin: 8px 16px 0;
+    padding: 10px 16px;
+    background: #FAFAFF;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #999;
+    text-align: center;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #52D880;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>Chinese Clock</h1>
+      <div class="subtitle">Voice Alarm</div>
+    </div>
+  </div>
+
+  <!-- Clock Circle (like 小宇宙's player artwork) -->
+  <div class="clock-area">
+    <div class="clock-circle">
+      <div class="clock-time">15:30:45</div>
+      <div class="clock-date">2026-04-06  Monday</div>
+    </div>
+  </div>
+
+  <!-- Settings Card -->
+  <div class="card">
+    <div class="row">
+      <span class="row-label">Alarm Time</span>
+      <div class="row-value">
+        <span class="pill">08</span>
+        <span style="color:#999; font-weight:600;">:</span>
+        <span class="pill">00</span>
+      </div>
+    </div>
+    <div class="row">
+      <span class="row-label">Gap Between</span>
+      <div class="row-value">
+        <span class="pill">1</span>
+        <span class="pill-unit">sec</span>
+      </div>
+    </div>
+    <div class="row">
+      <span class="row-label">Voice Speed</span>
+      <div class="slider-track">
+        <div class="slider-fill"></div>
+        <div class="slider-thumb"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voice Card -->
+  <div class="voice-card">
+    <div class="voice-row">
+      <div class="voice-info">
+        <div class="voice-avatar">&#127908;</div>
+        <div>
+          <div class="voice-name">Stanley Voice</div>
+          <div class="voice-sub">Voice clone active</div>
+        </div>
+      </div>
+      <div class="voice-btns">
+        <button class="btn-sm btn-record">Record</button>
+        <button class="btn-sm btn-upload">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voice Library -->
+  <div class="lib-title">Voice Library</div>
+  <div class="lib-list">
+    <div class="lib-item active">
+      <div class="lib-dot active"></div>
+      <span class="lib-name">Stanley Voice</span>
+      <span class="lib-tag">Active</span>
+      <button class="lib-btn">Use</button>
+    </div>
+    <div class="lib-item">
+      <div class="lib-dot inactive"></div>
+      <span class="lib-name">Recording_01</span>
+      <button class="lib-btn">Use</button>
+      <button class="lib-btn">Del</button>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="actions">
+    <button class="btn-action btn-start">Start</button>
+    <button class="btn-action btn-stop">Stop</button>
+    <button class="btn-action btn-test">Test</button>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar">
+    <span class="status-dot"></span>
+    Ready - Set alarm time and press Start
+  </div>
+
+</div>
+
+</body>
+</html>
