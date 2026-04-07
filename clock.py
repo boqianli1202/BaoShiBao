@@ -248,6 +248,92 @@ class VoiceCloner:
         threading.Thread(target=_run, daemon=True).start()
 
 
+# ─── Styled Confirm / Alert Dialogs ───────────────────────────────
+
+class StyledDialog(ctk.CTkToplevel):
+    """A confirm/alert dialog matching the app's light blue theme."""
+
+    def __init__(self, parent, title="", message="", confirm_text="Confirm",
+                 cancel_text="Cancel", show_cancel=True, icon_text="?"):
+        super().__init__(parent)
+        self.title(title)
+        self.resizable(False, False)
+        self.configure(fg_color="#F5F5F5")
+        self.transient(parent)
+        self.grab_set()
+        self.result = False
+
+        # Center on parent
+        self.update_idletasks()
+        w, h = 340, 220 if show_cancel else 190
+        self.geometry(f"{w}x{h}")
+
+        # Icon circle
+        icon_frame = ctk.CTkFrame(self, fg_color="transparent")
+        icon_frame.pack(pady=(24, 8))
+        circle = ctk.CTkFrame(icon_frame, width=50, height=50, corner_radius=25,
+                               fg_color="#5B9BD5")
+        circle.pack()
+        circle.pack_propagate(False)
+        ctk.CTkLabel(circle, text=icon_text, font=ctk.CTkFont(size=22),
+                      text_color="#FFFFFF").pack(expand=True)
+
+        # Message
+        ctk.CTkLabel(
+            self, text=message, font=ctk.CTkFont(size=14),
+            text_color="#333333", wraplength=290, justify="center",
+        ).pack(padx=20, pady=(4, 16))
+
+        # Buttons
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.pack(pady=(0, 16))
+
+        if show_cancel:
+            ctk.CTkButton(
+                btn_frame, text=cancel_text, width=120, height=40, corner_radius=14,
+                fg_color="#F0F0F0", text_color="#666666", hover_color="#E0E0E0",
+                font=ctk.CTkFont(size=14, weight="bold"),
+                command=self._on_cancel,
+            ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            btn_frame, text=confirm_text, width=120, height=40, corner_radius=14,
+            fg_color="#5B9BD5", text_color="#FFFFFF", hover_color="#4A8AC4",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            command=self._on_confirm,
+        ).pack(side="left", padx=6)
+
+        # Handle window close
+        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.after(100, self.focus_force)
+
+    def _on_confirm(self):
+        self.result = True
+        self.grab_release()
+        self.destroy()
+
+    def _on_cancel(self):
+        self.result = False
+        self.grab_release()
+        self.destroy()
+
+
+def styled_confirm(parent, title, message, confirm_text="Confirm",
+                   cancel_text="Cancel", icon_text="?"):
+    """Show a styled confirm dialog. Returns True/False."""
+    d = StyledDialog(parent, title, message, confirm_text, cancel_text,
+                     show_cancel=True, icon_text=icon_text)
+    parent.wait_window(d)
+    return d.result
+
+
+def styled_alert(parent, title, message, button_text="OK", icon_text="!"):
+    """Show a styled alert dialog."""
+    d = StyledDialog(parent, title, message, confirm_text=button_text,
+                     show_cancel=False, icon_text=icon_text)
+    parent.wait_window(d)
+
+
 # ─── Recording Dialog ──────────────────────────────────────────────
 
 RECORD_SCRIPTS = [
@@ -849,14 +935,12 @@ class AlarmApp:
     def _use_library_voice(self, path, ref_text):
         """Switch to a voice from the library (with confirmation)."""
         if not os.path.isfile(path):
-            messagebox.showerror("Error", "Voice file not found!")
+            styled_alert(self.root, "Error", "Voice file not found!", icon_text="!")
             return
         name = os.path.basename(path)
-        confirm = messagebox.askyesno(
-            "Use Voice",
-            f"Switch to \"{name}\" and start voice cloning?",
-        )
-        if not confirm:
+        if not styled_confirm(self.root, "Use Voice",
+                               f"Switch to \"{name}\" and start voice cloning?",
+                               confirm_text="Use", icon_text="🎙"):
             return
         self.cloner.set_reference(path, ref_text)
         self._refresh_voice_ui()
@@ -901,7 +985,12 @@ class AlarmApp:
         self._save_config()
 
     def _delete_library_voice(self, name):
-        """Remove a voice from the library."""
+        """Remove a voice from the library (with confirmation)."""
+        if not styled_confirm(self.root, "Delete Voice",
+                               f"Delete \"{name}\" from the library?",
+                               confirm_text="Delete", cancel_text="Keep",
+                               icon_text="🗑"):
+            return
         voices = self._get_library_voices()
         new_voices = []
         for v in voices:
@@ -1105,18 +1194,16 @@ class AlarmApp:
     def _record_voice(self):
         """Open the recording dialog."""
         if not RECORD_AVAILABLE:
-            messagebox.showinfo(
-                "Record",
-                "Recording requires sounddevice.\n\n"
-                "Run: pip install sounddevice\n\n"
-                "Then restart the app.")
+            styled_alert(self.root, "Record",
+                          "Recording requires sounddevice.\n\n"
+                          "Run: pip install sounddevice\n\nThen restart.",
+                          icon_text="🎙")
             return
         if not F5_AVAILABLE:
-            messagebox.showinfo(
-                "Record",
-                "Voice cloning requires F5-TTS.\n\n"
-                "Run: pip install f5-tts\n"
-                "Then restart the app.")
+            styled_alert(self.root, "Record",
+                          "Voice cloning requires F5-TTS.\n\n"
+                          "Run: pip install f5-tts\n\nThen restart.",
+                          icon_text="🔊")
             return
 
         dialog = RecordDialog(self.root)
@@ -1157,13 +1244,10 @@ class AlarmApp:
 
     def _upload_voice(self):
         if not F5_AVAILABLE:
-            messagebox.showinfo(
-                "Voice Clone",
-                "Voice cloning requires F5-TTS.\n\n"
-                "Run in terminal:\n"
-                "  pip install f5-tts\n"
-                "  conda install -c conda-forge ffmpeg\n\n"
-                "Then restart the app.")
+            styled_alert(self.root, "Voice Clone",
+                          "Voice cloning requires F5-TTS.\n\n"
+                          "Run: pip install f5-tts\n\nThen restart.",
+                          icon_text="🔊")
             return
 
         path = filedialog.askopenfilename(
