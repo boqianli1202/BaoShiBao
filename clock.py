@@ -135,6 +135,7 @@ class VoiceCloner:
         self.model = None
         self.ref_audio_path = None
         self.ref_text = ""
+        self.display_name = ""  # friendly name for UI
         self._model_loading = False
         self._model_ready = False
         self._gen_lock = threading.Lock()
@@ -801,9 +802,9 @@ class AlarmApp:
             font=ctk.CTkFont(size=12), text_color=C["date_text"], anchor="w")
         self.voice_status_lbl.pack(side="left", fill="x", expand=True)
         self.clear_btn = ctk.CTkButton(
-            inner, text="Clear", width=55, height=32, corner_radius=16,
+            inner, text="↻", width=32, height=32, corner_radius=16,
             fg_color=C["btn_clear_bg"], text_color=C["btn_clear_fg"],
-            hover_color=C["btn_clear_h"], font=ctk.CTkFont(size=12, weight="bold"),
+            hover_color=C["btn_clear_h"], font=ctk.CTkFont(size=18),
             command=self._clear_voice)
         ctk.CTkButton(
             inner, text="Upload", width=75, height=32, corner_radius=16,
@@ -937,16 +938,17 @@ class AlarmApp:
         if not os.path.isfile(path):
             styled_alert(self.root, "Error", "Voice file not found!", icon_text="!")
             return
-        name = os.path.basename(path)
+        display, _ = os.path.splitext(os.path.basename(path))
         if not styled_confirm(self.root, "Use Voice",
-                               f"Switch to \"{name}\" and start voice cloning?",
+                               f"Switch to \"{display}\" and start voice cloning?",
                                confirm_text="Use", icon_text="🎙"):
             return
+        self.cloner.display_name = display
         self.cloner.set_reference(path, ref_text)
         self._refresh_voice_ui()
         self._refresh_library()
         self._save_config()
-        self.status_label.configure(text=f"Switched to: {name}")
+        self.status_label.configure(text=f"Switched to: {display}")
         self._poll_model_then_clone()
 
     def _rename_library_voice(self, old_name):
@@ -986,8 +988,9 @@ class AlarmApp:
 
     def _delete_library_voice(self, name):
         """Remove a voice from the library (with confirmation)."""
+        display, _ = os.path.splitext(name)
         if not styled_confirm(self.root, "Delete Voice",
-                               f"Delete \"{name}\" from the library?",
+                               f"Delete \"{display}\" from the library?",
                                confirm_text="Delete", cancel_text="Keep",
                                icon_text="🗑"):
             return
@@ -1034,6 +1037,10 @@ class AlarmApp:
         if "speed" in c:
             self.speed_var.set(c["speed"])
         if c.get("voice_ref_audio") and os.path.isfile(c["voice_ref_audio"]):
+            self.cloner.display_name = c.get("voice_display_name", "")
+            if not self.cloner.display_name:
+                dn, _ = os.path.splitext(os.path.basename(c["voice_ref_audio"]))
+                self.cloner.display_name = dn
             self.cloner.set_reference(c["voice_ref_audio"], c.get("voice_ref_text", ""))
             self._refresh_voice_ui()
 
@@ -1045,6 +1052,7 @@ class AlarmApp:
             "speed": self.speed_var.get(),
             "voice_ref_audio": self.cloner.ref_audio_path or "",
             "voice_ref_text": self.cloner.ref_text or "",
+            "voice_display_name": self.cloner.display_name or "",
         })
 
     # ── Clock tick ──
@@ -1216,6 +1224,8 @@ class AlarmApp:
 
         if dialog.result_action == "use":
             # Use directly without saving to library
+            ts = datetime.datetime.now().strftime("%H%M%S")
+            self.cloner.display_name = f"Recording {ts}"
             temp_dest = os.path.join(CACHE_DIR, "direct_voice.wav")
             shutil.copy2(dialog.result_path, temp_dest)
             self.cloner.set_reference(temp_dest, dialog.result_text)
@@ -1235,6 +1245,8 @@ class AlarmApp:
             voices.append({"name": name, "path": dest, "ref_text": dialog.result_text})
             self._save_library_voices(voices)
 
+            display, _ = os.path.splitext(name)
+            self.cloner.display_name = display
             self.cloner.set_reference(dest, dialog.result_text)
             self._refresh_voice_ui()
             self._refresh_library()
@@ -1265,6 +1277,8 @@ class AlarmApp:
         ref_text = dialog.get_input() or ""
 
         # Save to library and activate
+        display, _ = os.path.splitext(os.path.basename(path))
+        self.cloner.display_name = display
         self._add_to_library(path, ref_text)
         self.cloner.set_reference(path, ref_text)
         self._refresh_voice_ui()
@@ -1318,6 +1332,7 @@ class AlarmApp:
     def _clear_voice(self):
         self.cloner.ref_audio_path = None
         self.cloner.ref_text = ""
+        self.cloner.display_name = ""
         self.cloner._cache.clear()
         self._refresh_voice_ui()
         self._save_config()
@@ -1325,16 +1340,17 @@ class AlarmApp:
 
     def _refresh_voice_ui(self):
         s = self.cloner.status
+        name = self.cloner.display_name or "..."
         if s == "not_installed":
-            txt = "Voice clone: install f5-tts to enable"
+            txt = "Install f5-tts to enable voice clone"
         elif s == "loading_model":
-            txt = "Loading voice clone model..."
+            txt = f"Voice: {name} (loading model...)"
         elif s == "ready":
-            txt = f"Voice clone: {os.path.basename(self.cloner.ref_audio_path)}"
+            txt = f"Voice: {name}"
         elif s == "model_not_loaded":
-            txt = "Voice file set, loading model..."
+            txt = f"Voice: {name} (loading...)"
         else:
-            txt = "System voice: Tingting"
+            txt = "Voice: Tingting (system)"
         self.voice_status_lbl.configure(text=txt)
 
         if self.cloner.ref_audio_path:
