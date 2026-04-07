@@ -265,14 +265,15 @@ class RecordDialog(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Record Your Voice")
-        self.geometry("400x480")
+        self.geometry("400x520")
         self.resizable(False, False)
         self.configure(fg_color="#F5F5F5")
         self.transient(parent)
         self.grab_set()
 
-        self.result_path = None  # set when user saves
+        self.result_path = None
         self.result_text = ""
+        self.result_action = None  # "use", "save", or "delete"
         self._recording = False
         self._audio_frames = []
         self._stream = None
@@ -350,29 +351,46 @@ class RecordDialog(ctk.CTkToplevel):
 
         # Post-recording buttons (hidden initially)
         self.post_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.play_btn = ctk.CTkButton(
-            self.post_frame, text="Play", width=90, height=38, corner_radius=14,
+
+        # Row 1: Play + Re-record
+        post_row1 = ctk.CTkFrame(self.post_frame, fg_color="transparent")
+        post_row1.pack(pady=(0, 6))
+        ctk.CTkButton(
+            post_row1, text="Play Preview", width=130, height=34, corner_radius=14,
             fg_color="#FFF8F0", text_color="#E8A040", hover_color="#FFF0E0",
-            font=ctk.CTkFont(size=13, weight="bold"), command=self._play,
-        )
-        self.play_btn.pack(side="left", padx=6)
+            font=ctk.CTkFont(size=12, weight="bold"), command=self._play,
+        ).pack(side="left", padx=4)
         ctk.CTkButton(
-            self.post_frame, text="Re-record", width=100, height=38, corner_radius=14,
+            post_row1, text="Re-record", width=110, height=34, corner_radius=14,
             fg_color="#F0F0F0", text_color="#666666", hover_color="#E0E0E0",
-            font=ctk.CTkFont(size=13, weight="bold"), command=self._reset,
-        ).pack(side="left", padx=6)
+            font=ctk.CTkFont(size=12, weight="bold"), command=self._reset,
+        ).pack(side="left", padx=4)
+
+        # Row 2: Use Directly / Save to Library / Delete
+        post_row2 = ctk.CTkFrame(self.post_frame, fg_color="transparent")
+        post_row2.pack(pady=2)
         ctk.CTkButton(
-            self.post_frame, text="Save", width=90, height=38, corner_radius=14,
+            post_row2, text="Use Directly", width=108, height=36, corner_radius=14,
             fg_color="#5B9BD5", text_color="#FFFFFF", hover_color="#4A8AC4",
-            font=ctk.CTkFont(size=13, weight="bold"), command=self._save,
-        ).pack(side="left", padx=6)
+            font=ctk.CTkFont(size=12, weight="bold"), command=self._use_directly,
+        ).pack(side="left", padx=3)
+        ctk.CTkButton(
+            post_row2, text="Save to Library", width=118, height=36, corner_radius=14,
+            fg_color="#E0ECFA", text_color="#5B9BD5", hover_color="#D0E4F5",
+            font=ctk.CTkFont(size=12, weight="bold"), command=self._save_to_library,
+        ).pack(side="left", padx=3)
+        ctk.CTkButton(
+            post_row2, text="Delete", width=68, height=36, corner_radius=14,
+            fg_color="#F0F0F0", text_color="#999999", hover_color="#E0E0E0",
+            font=ctk.CTkFont(size=12), command=self._delete_recording,
+        ).pack(side="left", padx=3)
 
         # Status
         self.status = ctk.CTkLabel(
             self, text="Press Record and read the script",
-            font=ctk.CTkFont(size=12), text_color="#C48B9F",
+            font=ctk.CTkFont(size=12), text_color="#999999",
         )
-        self.status.pack(pady=(8, 12))
+        self.status.pack(pady=(6, 10))
 
     # ── Script navigation ──
 
@@ -493,11 +511,35 @@ class RecordDialog(ctk.CTkToplevel):
         self.timer_label.configure(text=f"{RECORD_SECONDS}s remaining")
         self._audio_frames = []
 
-    def _save(self):
+    def _use_directly(self):
+        """Use the recording immediately without saving to library."""
         if not hasattr(self, "_temp_path") or not os.path.isfile(self._temp_path):
             return
         self.result_path = self._temp_path
         self.result_text = RECORD_SCRIPTS[self._script_idx]
+        self.result_action = "use"
+        self.grab_release()
+        self.destroy()
+
+    def _save_to_library(self):
+        """Save the recording to the library and use it."""
+        if not hasattr(self, "_temp_path") or not os.path.isfile(self._temp_path):
+            return
+        self.result_path = self._temp_path
+        self.result_text = RECORD_SCRIPTS[self._script_idx]
+        self.result_action = "save"
+        self.grab_release()
+        self.destroy()
+
+    def _delete_recording(self):
+        """Discard the recording."""
+        if hasattr(self, "_temp_path") and os.path.isfile(self._temp_path):
+            try:
+                os.remove(self._temp_path)
+            except OSError:
+                pass
+        self.result_path = None
+        self.result_action = "delete"
         self.grab_release()
         self.destroy()
 
@@ -805,16 +847,23 @@ class AlarmApp:
         self._refresh_library()
 
     def _use_library_voice(self, path, ref_text):
-        """Switch to a voice from the library."""
+        """Switch to a voice from the library (with confirmation)."""
         if not os.path.isfile(path):
             messagebox.showerror("Error", "Voice file not found!")
+            return
+        name = os.path.basename(path)
+        confirm = messagebox.askyesno(
+            "Use Voice",
+            f"Switch to \"{name}\" and start voice cloning?",
+        )
+        if not confirm:
             return
         self.cloner.set_reference(path, ref_text)
         self._refresh_voice_ui()
         self._refresh_library()
         self._save_config()
-        self.status_label.configure(
-            text=f"Switched to: {os.path.basename(path)}")
+        self.status_label.configure(text=f"Switched to: {name}")
+        self._poll_model_then_clone()
 
     def _rename_library_voice(self, old_name):
         """Rename a voice in the library via popup dialog."""
@@ -1073,9 +1122,23 @@ class AlarmApp:
         dialog = RecordDialog(self.root)
         self.root.wait_window(dialog)
 
-        if dialog.result_path and os.path.isfile(dialog.result_path):
-            # Save to library with timestamp name
-            import shutil
+        if not dialog.result_path or not os.path.isfile(dialog.result_path):
+            return
+
+        import shutil
+
+        if dialog.result_action == "use":
+            # Use directly without saving to library
+            temp_dest = os.path.join(CACHE_DIR, "direct_voice.wav")
+            shutil.copy2(dialog.result_path, temp_dest)
+            self.cloner.set_reference(temp_dest, dialog.result_text)
+            self._refresh_voice_ui()
+            self._save_config()
+            self.status_label.configure(text="Voice set! Loading model...")
+            self._poll_model_then_clone()
+
+        elif dialog.result_action == "save":
+            # Save to library AND use
             ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             name = f"recording_{ts}.wav"
             dest = os.path.join(LIBRARY_DIR, name)
@@ -1089,8 +1152,8 @@ class AlarmApp:
             self._refresh_voice_ui()
             self._refresh_library()
             self._save_config()
-            self.status_label.configure(text="Recording saved! Loading model...")
-            self._poll_model()
+            self.status_label.configure(text="Saved to library! Loading model...")
+            self._poll_model_then_clone()
 
     def _upload_voice(self):
         if not F5_AVAILABLE:
@@ -1124,7 +1187,7 @@ class AlarmApp:
         self._refresh_library()
         self._save_config()
         self.status_label.configure(text="Voice saved to library & loading model...")
-        self._poll_model()
+        self._poll_model_then_clone()
 
     def _poll_model(self):
         self._refresh_voice_ui()
@@ -1132,6 +1195,41 @@ class AlarmApp:
             self.root.after(1000, self._poll_model)
         elif self.cloner._model_ready:
             self.status_label.configure(text="Voice clone ready! Your voice will be used.")
+
+    def _poll_model_then_clone(self):
+        """Wait for model to load, then immediately start cloning."""
+        self._refresh_voice_ui()
+        if self.cloner._model_loading:
+            self.root.after(1000, self._poll_model_then_clone)
+        elif self.cloner._model_ready:
+            self._start_preclone()
+
+    def _start_preclone(self):
+        """Immediately generate a cloned voice sample so it's ready to use."""
+        text = time_to_chinese()
+        self.status_label.configure(text="🔊 Voice Cloning in progress...")
+        self._cloning_active = True
+        self._animate_cloning()
+
+        def _do_clone():
+            self.cloner.generate(text)
+            self._cloning_active = False
+            self.root.after(0, lambda: self.status_label.configure(
+                text="✅ Voice cloned! Ready to use."))
+            self.root.after(0, self._refresh_voice_ui)
+
+        threading.Thread(target=_do_clone, daemon=True).start()
+
+    def _animate_cloning(self):
+        """Show animated cloning indicator."""
+        if not hasattr(self, "_cloning_active") or not self._cloning_active:
+            return
+        dots = ["🔊 Voice Cloning.", "🔊 Voice Cloning..", "🔊 Voice Cloning..."]
+        if not hasattr(self, "_clone_dot_idx"):
+            self._clone_dot_idx = 0
+        self._clone_dot_idx = (self._clone_dot_idx + 1) % 3
+        self.status_label.configure(text=dots[self._clone_dot_idx])
+        self.root.after(600, self._animate_cloning)
 
     def _clear_voice(self):
         self.cloner.ref_audio_path = None
