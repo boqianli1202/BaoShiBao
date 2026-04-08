@@ -1135,38 +1135,48 @@ class AlarmApp:
 
     def _alarm_loop(self):
         """Keep speaking the time with a gap, until alarm_active is False."""
-        last_text = None
+        import time as _time
+        last_full_text = None
+        alarm_start = _time.time()
+
         while self.alarm_active:
-            text = time_to_chinese()
+            time_text = time_to_chinese()
             rate = self.speed_var.get()
             gap = float(self.gap_var.get())
+            elapsed = _time.time() - alarm_start
+
+            # Choose prefix based on how long the alarm has been going
+            if elapsed < 60:
+                prefix = "闹铃响咯，起床啦！"
+            else:
+                prefix = "他妈的，赶紧起床了！"
+
+            full_text = prefix + time_text
 
             # Update status on UI thread
-            self.root.after(0, lambda t=text: self.status_label.configure(
+            self.root.after(0, lambda t=full_text: self.status_label.configure(
                 text=f"Speaking: {t}"))
 
-            # If text changed (new minute), generate fresh clone
-            if text != last_text and self.cloner.is_ready:
-                cached = self.cloner.get_cached(text)
+            # If text changed, generate fresh clone
+            if full_text != last_full_text and self.cloner.is_ready:
+                cached = self.cloner.get_cached(full_text)
                 if not cached:
                     self.root.after(0, lambda: self.status_label.configure(
-                        text="Generating your voice for new minute..."))
-                    self.cloner.generate(text)
-                last_text = text
+                        text="Generating your voice..."))
+                    self.cloner.generate(full_text)
+                last_full_text = full_text
 
             # Speak: cloned voice or Tingting
-            cached = self.cloner.get_cached(text)
+            cached = self.cloner.get_cached(full_text)
             if cached:
                 self._play_wav(cached)
             else:
-                self._speak_tingting(text, rate)
+                self._speak_tingting(full_text, rate)
 
             # Check if stopped during speech
             if not self.alarm_active:
                 break
 
-            # Wait the gap
-            import time as _time
             _time.sleep(gap)
 
         self._alarm_loop_running = False
