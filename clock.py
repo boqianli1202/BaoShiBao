@@ -721,14 +721,31 @@ class AlarmApp:
             font=ctk.CTkFont(size=11), text_color="#B8D4EC")
         self.date_label.pack(pady=(0, 50))
 
-        # Settings card
-        card = ctk.CTkFrame(self.root, fg_color=C["card"], corner_radius=16,
-                            border_width=1, border_color=C["card_border"])
-        card.pack(fill="x", padx=16, pady=8)
-        self._ui_alarm_row(card)
-        self._ui_gap_row(card)
-        self._ui_speed_row(card)
-        self._ui_keep_awake_row(card)
+        # Settings card (collapsible)
+        settings_header = ctk.CTkFrame(self.root, fg_color=C["card"], corner_radius=16,
+                                        border_width=1, border_color=C["card_border"])
+        settings_header.pack(fill="x", padx=16, pady=(8, 0))
+
+        header_row = ctk.CTkFrame(settings_header, fg_color="transparent")
+        header_row.pack(fill="x", padx=16, pady=10)
+        ctk.CTkLabel(header_row, text="Settings",
+                      font=ctk.CTkFont(size=14, weight="bold"),
+                      text_color=C["label"]).pack(side="left")
+        self._settings_expanded = True
+        self.settings_toggle_btn = ctk.CTkButton(
+            header_row, text="▲", width=32, height=28, corner_radius=14,
+            fg_color=C["card_border"], text_color=C["date_text"],
+            hover_color="#E0E0E0", font=ctk.CTkFont(size=13),
+            command=self._toggle_settings,
+        )
+        self.settings_toggle_btn.pack(side="right")
+
+        self.settings_body = ctk.CTkFrame(settings_header, fg_color="transparent")
+        self.settings_body.pack(fill="x")
+        self._ui_alarm_row(self.settings_body)
+        self._ui_gap_row(self.settings_body)
+        self._ui_speed_row(self.settings_body)
+        self._ui_keep_awake_row(self.settings_body)
 
         # Voice card + library
         self._ui_voice_card()
@@ -743,6 +760,17 @@ class AlarmApp:
             font=ctk.CTkFont(size=12), text_color=C["status_text"],
             fg_color=C["status_bg"], corner_radius=12, height=36)
         self.status_label.pack(fill="x", padx=16, pady=(5, 15))
+
+    def _toggle_settings(self):
+        """Collapse/expand the settings card."""
+        if self._settings_expanded:
+            self.settings_body.pack_forget()
+            self.settings_toggle_btn.configure(text="▼")
+            self._settings_expanded = False
+        else:
+            self.settings_body.pack(fill="x")
+            self.settings_toggle_btn.configure(text="▲")
+            self._settings_expanded = True
 
     def _ui_alarm_row(self, card):
         row = ctk.CTkFrame(card, fg_color="transparent")
@@ -1186,14 +1214,20 @@ class AlarmApp:
 
     def _play_wav(self, path):
         try:
-            subprocess.run(["afplay", path], stdout=subprocess.DEVNULL,
+            # --volume 3 = 3x louder than normal
+            subprocess.run(["afplay", "--volume", "3", path],
+                           stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, timeout=30)
         except Exception:
             pass
 
     def _speak_tingting(self, text, rate):
         try:
-            subprocess.run(["say", "-v", "Tingting", "-r", str(rate), text],
+            # Save to temp wav then play loud with afplay
+            tmp = os.path.join(CACHE_DIR, "_tingting_tmp.aiff")
+            subprocess.run(["say", "-v", "Tingting", "-r", str(rate), "-o", tmp, text],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15)
+            subprocess.run(["afplay", "--volume", "3", tmp],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15)
         except Exception:
             pass
