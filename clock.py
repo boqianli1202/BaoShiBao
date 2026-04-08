@@ -674,6 +674,7 @@ class AlarmApp:
         self.alarm_active = False
         self.alarm_triggered = False
         self._alarm_loop_running = False
+        self._caffeinate_proc = None  # keeps Mac awake
 
         self.root = ctk.CTk()
         self.root.title("报时宝 BaoShiBao")
@@ -727,6 +728,7 @@ class AlarmApp:
         self._ui_alarm_row(card)
         self._ui_gap_row(card)
         self._ui_speed_row(card)
+        self._ui_keep_awake_row(card)
 
         # Voice card + library
         self._ui_voice_card()
@@ -780,7 +782,7 @@ class AlarmApp:
 
     def _ui_speed_row(self, card):
         row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=20, pady=(5, 15))
+        row.pack(fill="x", padx=20, pady=(5, 5))
         ctk.CTkLabel(row, text="Voice Speed", font=ctk.CTkFont(size=14),
                       text_color=C["label"]).pack(side="left")
         self.speed_var = ctk.IntVar(value=200)
@@ -790,6 +792,50 @@ class AlarmApp:
             button_color=C["clock_text"], button_hover_color=C["btn_stop_bg"],
             progress_color=C["btn_stop_bg"], fg_color=C["card_border"],
         ).pack(side="right")
+
+    def _ui_keep_awake_row(self, card):
+        row = ctk.CTkFrame(card, fg_color="transparent")
+        row.pack(fill="x", padx=20, pady=(5, 12))
+        ctk.CTkLabel(row, text="Keep Awake", font=ctk.CTkFont(size=14),
+                      text_color=C["label"]).pack(side="left")
+        ctk.CTkLabel(row, text="☕", font=ctk.CTkFont(size=14)).pack(side="left", padx=(4, 0))
+        self.keep_awake_var = ctk.BooleanVar(value=False)
+        ctk.CTkSwitch(
+            row, text="", variable=self.keep_awake_var,
+            width=44, height=22,
+            button_color=C["accent"], button_hover_color=C["accent_dark"],
+            progress_color=C["accent"], fg_color=C["card_border"],
+            command=self._on_keep_awake_toggle,
+        ).pack(side="right")
+
+    def _on_keep_awake_toggle(self):
+        if self.keep_awake_var.get():
+            self._start_caffeinate()
+        else:
+            self._stop_caffeinate()
+
+    def _start_caffeinate(self):
+        """Prevent Mac from sleeping using caffeinate."""
+        if self._caffeinate_proc is None:
+            try:
+                self._caffeinate_proc = subprocess.Popen(
+                    ["caffeinate", "-di"],  # -d: prevent display sleep, -i: prevent idle sleep
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+                print("[KeepAwake] caffeinate started")
+            except Exception as e:
+                print(f"[KeepAwake] Failed: {e}")
+
+    def _stop_caffeinate(self):
+        """Allow Mac to sleep again."""
+        if self._caffeinate_proc is not None:
+            try:
+                self._caffeinate_proc.terminate()
+                self._caffeinate_proc.wait(timeout=3)
+            except Exception:
+                pass
+            self._caffeinate_proc = None
+            print("[KeepAwake] caffeinate stopped")
 
     def _ui_voice_card(self):
         vc = ctk.CTkFrame(self.root, fg_color="#F0F6FF", corner_radius=16,
@@ -1148,6 +1194,10 @@ class AlarmApp:
         self.alarm_active = True
         self.alarm_triggered = False
 
+        # Auto-enable Keep Awake when alarm starts
+        if self.keep_awake_var.get():
+            self._start_caffeinate()
+
         h, m = self.hour_var.get(), self.min_var.get()
         self.start_btn.configure(state="disabled")
         self.stop_btn.configure(state="normal")
@@ -1168,6 +1218,7 @@ class AlarmApp:
         self.alarm_active = False
         self.alarm_triggered = False
         # Loop thread will detect alarm_active=False and stop itself
+        self._stop_caffeinate()
         self.status_label.configure(text="Alarm stopped")
         self.start_btn.configure(state="normal")
         self.stop_btn.configure(state="disabled")
@@ -1365,7 +1416,13 @@ class AlarmApp:
         self.root.attributes("-topmost", True)
         self.root.after(100, lambda: self.root.attributes("-topmost", False))
         self.root.focus_force()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.mainloop()
+
+    def _on_close(self):
+        """Clean up caffeinate on app exit."""
+        self._stop_caffeinate()
+        self.root.destroy()
 
 
 if __name__ == "__main__":
