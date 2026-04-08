@@ -1136,12 +1136,27 @@ class AlarmApp:
         self.clock_label.configure(text=now.strftime("%H:%M:%S"))
         self.date_label.configure(text=now.strftime("%Y-%m-%d  %A"))
 
-        # Check alarm trigger
         if self.alarm_active and not self.alarm_triggered:
             try:
                 ah, am = int(self.hour_var.get()), int(self.min_var.get())
+
+                # Pre-generate voice 30 seconds before alarm
+                if self.cloner.is_ready and not hasattr(self, "_pregen_started"):
+                    alarm_dt = now.replace(hour=ah, minute=am, second=0, microsecond=0)
+                    diff = (alarm_dt - now).total_seconds()
+                    if 0 < diff <= 30:
+                        self._pregen_started = True
+                        # Pre-generate the first sentence with prefix
+                        pregen_text = "闹铃响咯，起床啦！" + time_to_chinese(alarm_dt)
+                        self.cloner.pregenerate_async(pregen_text)
+                        self.status_label.configure(
+                            text="Alarm in 30s - pre-generating voice...")
+
+                # Trigger alarm at the exact time
                 if now.hour == ah and now.minute == am:
                     self.alarm_triggered = True
+                    if hasattr(self, "_pregen_started"):
+                        del self._pregen_started
                     self._start_alarm_loop()
             except ValueError:
                 pass
@@ -1247,12 +1262,16 @@ class AlarmApp:
         self.stop_btn.configure(state="normal")
         self._save_config()
 
-        # Pre-generate cloned voice for the alarm time NOW
+        # Reset pre-gen flag
+        if hasattr(self, "_pregen_started"):
+            del self._pregen_started
+
+        # Pre-generate cloned voice with prefix for the alarm time
         if self.cloner.is_ready:
             alarm_dt = datetime.datetime.now().replace(
                 hour=int(h), minute=int(m), second=0, microsecond=0)
-            alarm_text = time_to_chinese(alarm_dt)
-            self.cloner.pregenerate_async(alarm_text)
+            pregen_text = "闹铃响咯，起床啦！" + time_to_chinese(alarm_dt)
+            self.cloner.pregenerate_async(pregen_text)
             self.status_label.configure(
                 text=f"Alarm {h}:{m} - preparing your voice...")
         else:
