@@ -1177,46 +1177,82 @@ class AlarmApp:
         threading.Thread(target=self._alarm_loop, daemon=True).start()
 
     def _alarm_loop(self):
-        """Keep speaking the time with a gap, until alarm_active is False."""
+        """Keep speaking the time with a gap, until alarm_active is False.
+
+        Strategy:
+        - Keep replaying the current cached sentence while waiting
+        - 30 seconds before each new minute, start generating the next sentence
+        - When new sentence is ready, switch to it seamlessly
+        """
         import time as _time
-        last_full_text = None
         alarm_start = _time.time()
+        current_text = None
+        next_pregen_started = False
 
         while self.alarm_active:
-            time_text = time_to_chinese()
+            now = datetime.datetime.now()
             rate = self.speed_var.get()
             gap = float(self.gap_var.get())
             elapsed = _time.time() - alarm_start
 
-            # Choose prefix based on how long the alarm has been going
+            # Choose prefix
             if elapsed < 60:
                 prefix = "闹铃响咯，起床啦！"
             else:
                 prefix = "他妈的，赶紧起床了！"
 
-            full_text = prefix + time_text
+            full_text = prefix + time_to_chinese()
 
-            # Update status on UI thread
-            self.root.after(0, lambda t=full_text: self.status_label.configure(
-                text=f"Speaking: {t}"))
-
-            # If text changed, generate fresh clone
-            if full_text != last_full_text and self.cloner.is_ready:
-                cached = self.cloner.get_cached(full_text)
-                if not cached:
+            # --- Pre-generate next minute's sentence 30s before ---
+            if self.cloner.is_ready and now.second >= 30 and not next_pregen_started:
+                next_dt = now + datetime.timedelta(minutes=1)
+                next_dt = next_dt.replace(second=0, microsecond=0)
+                # Use the prefix that will be active at that time
+                next_elapsed = elapsed + (60 - now.second)
+                next_prefix = "闹铃响咯，起床啦！" if next_elapsed < 60 else "他妈的，赶紧起床了！"
+                next_text = next_prefix + time_to_chinese(next_dt)
+                if not self.cloner.get_cached(next_text):
+                    self.cloner.pregenerate_async(next_text)
                     self.root.after(0, lambda: self.status_label.configure(
-                        text="Generating your voice..."))
-                    self.cloner.generate(full_text)
-                last_full_text = full_text
+                        text="Pre-generating next minute..."))
+                next_pregen_started = True
 
-            # Speak: cloned voice or Tingting
+            # Reset pre-gen flag at the start of each minute
+            if now.second < 5:
+                next_pregen_started = False
+
+            # --- Speak current sentence ---
+            # If new text and we have a cached clone, switch to it
             cached = self.cloner.get_cached(full_text)
             if cached:
+                if full_text != current_text:
+                    current_text = full_text
+                self.root.after(0, lambda t=full_text: self.status_label.configure(
+                    text=f"Speaking: {t}"))
                 self._play_wav(cached)
+            elif current_text and self.cloner.get_cached(current_text):
+                # New sentence not ready yet — keep playing the OLD cached one
+                self.root.after(0, lambda: self.status_label.configure(
+                    text="Generating next... (repeating current)"))
+                self._play_wav(self.cloner.get_cached(current_text))
+            elif self.cloner.is_ready and not cached:
+                # First time, no cache at all — generate blocking
+                self.root.after(0, lambda: self.status_label.configure(
+                    text="Generating your voice..."))
+                self.cloner.generate(full_text)
+                current_text = full_text
+                new_cached = self.cloner.get_cached(full_text)
+                if new_cached:
+                    self._play_wav(new_cached)
+                else:
+                    self._speak_tingting(full_text, rate)
             else:
+                # No voice cloning — use Tingting
+                current_text = full_text
+                self.root.after(0, lambda t=full_text: self.status_label.configure(
+                    text=f"Speaking: {t}"))
                 self._speak_tingting(full_text, rate)
 
-            # Check if stopped during speech
             if not self.alarm_active:
                 break
 
